@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Teapot</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="include/farbtastic/farbtastic.css">
+    <link rel="stylesheet" href="include/slider/fd-slider.min.css" />
+</head>
+<body>
+    <div id="fps"></div>
+    <div id="controls">
+        <label>Environment</label>
+        <section id="environments">
+            <div class="mapOptions">
+                <label>Street View</label>
+                <div id="map"></div>
+            </div>
+            <div class="gplusOptions">
+                <label>Google+ #photosphere</label>
+                <div id="gplus"></div>
+            </div>
+        </section>
+        <div id="changeEnvironment"></div>
+        <label>Teapot</label>
+        <section>
+            <div>Color<input id="color" type="text" value="#FFFFFF" /></div>
+            <div id="colorpicker"></div>
+            <div>Shininess<input id="shininess" type="range" max="1.0" step="0.01" value="0.5" /></div>
+            <div>Blur<input id="smoothness" type="range" max="1.0" step="0.01" value="0.0" /></div>
+            <div>
+                Texture
+                <div id="texturePicker"></div>
+                <input id="textureAlpha" type="range" max="1.0" step="0.01" value="0.5" />
+            </div>
+            <div>
+                Bump Map
+                <div id="bumpMapPicker"></div>
+                <input id="bumpMapDepth" type="range" min="-2.0" max="2.0" step="0.01" value="0.5" />
+            </div>
+        </section>
+    </div>
+
+    <canvas id="canvas">
+        Your browser does not support canvas. Please use one that supports it, e.g. <a href="www.google.com/chrome/">Chrome</a>. 
+    </canvas>
+    <script type="x-shader/x-vertex" id="tableshader-v" src="tableshader.vert"></script>
+    <script type="x-shader/x-fragment" id="tableshader-f" src="tableshader.frag"></script>
+    <script type="x-shader/x-vertex" id="potshader-v" src="potshader.vert"></script>
+    <script type="x-shader/x-fragment" id="potshader-f" src="potshader.frag"></script>
+    <script type="x-shader/x-vertex" id="panoshader-v" src="panoshader.vert"></script>
+    <script type="x-shader/x-fragment" id="panoshader-f" src="panoshader.frag"></script>
+
+    <script src="//code.jquery.com/jquery-1.9.1.js"></script>
+    <script src="//maps.googleapis.com/maps/api/js?key=AIzaSyChR3A7b80MZL1F4QK43g8QpFNhqqG7SUg&sensor=false&language=en"></script>
+    <script src="include/sylvester/sylvester.js"></script>
+    <script src="include/farbtastic/farbtastic.js"></script>
+    <script src="include/slider/fd-slider.min.js"></script>
+    <script src="include/webgl-utils.js"></script>
+    <script src="include/PanoLoader.js"></script>
+    <script src="include/FastBlur.js"></script>
+    <script src="utils.js"></script>
+    <script src="sphere.js"></script>
+    <script src="objparser.js"></script>
+    <script src="pipeline.js"></script>
+    <script src="streetview.js"></script>
+    <script src="teapot.js"></script>
+    <script src="main.js"></script>
+    <script src="//apis.google.com/js/client.js?onload=initGPlus"></script>
+</body>
+</html>
