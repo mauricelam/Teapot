@@ -1,12 +1,13 @@
 precision mediump float;
 
-varying highp vec3 vNormal;
-varying highp vec3 vVertexPosition;
+varying vec3 vNormal;
+varying vec3 vVertexPosition;
 
 uniform vec2 uRotations;
 uniform sampler2D uReflectionSampler;
 uniform sampler2D uTextureSampler;
 uniform sampler2D uBumpMapSampler;
+uniform sampler2D uShadowMapSampler;
 
 uniform float uMaxBrightness;
 uniform float uAverageBrightness;
@@ -19,7 +20,11 @@ uniform float uShininess;
 uniform float uSmoothness;
 uniform float uTextureAlpha;
 uniform float uBumpMapDepth;
+uniform float uShadowDepth;
 uniform vec3 uColor;
+
+uniform mat4 lightView;
+uniform mat4 lightProj;
 
 float blackness(vec4 color) {
     return (3.0 - color.r - color.g - color.b) * color.a * 0.33;
@@ -70,10 +75,22 @@ mat3 transpose(mat3 matrix) {
     return result;
 }
 
+float linstep(float low, float high, float v) {
+    return clamp((v-low)/(high-low), 0.0, 1.0);
+}
+
+float VSM(sampler2D depths, vec2 uv, float compare) {
+    vec2 moments = texture2D(depths, uv).xy;
+    float p = smoothstep(compare-0.02, compare+0.002, moments.x);
+    float variance = max(moments.y - moments.x*moments.x, 0.003);
+    float d = compare - moments.x;
+    float p_max = linstep(0.05, 0.8, variance / (variance + d*d));
+    return clamp(max(p, p_max), 0.0, 1.0);
+}
+
 /**
  * Main Function
  */
-
 void main(void) {
     // Some useful attributes
     vec2 textureCoord = vec2(
@@ -86,8 +103,8 @@ void main(void) {
 
     vec4 viewVector = uPMatrix * uMVMatrix * vec4(-vVertexPosition, 1.0);
     vec3 view = normalize(viewVector.xyz / viewVector.w);
-    vec3 bump = bump(uBumpMapSampler, textureCoord, sDirection, tDirection) * uBumpMapDepth;
-    vec3 normal = normalize(vNormal.xyz + bump);
+    vec3 bumpVal = bump(uBumpMapSampler, textureCoord, sDirection, tDirection) * uBumpMapDepth;
+    vec3 normal = normalize(vNormal.xyz + bumpVal);
 
     // The rotation done by dragging
     // We need this to calculate the changes done to the environment
@@ -123,10 +140,21 @@ void main(void) {
 
     vec4 texture = texture2D(uTextureSampler, textureCoord);
 
-    // Add some noise
+    // Shadow mapping
+    // http://codeflow.org/entries/2013/feb/15/soft-shadow-mapping/hard-shadow.coffee
+    vec4 lightPos = lightView * vec4(vVertexPosition, 1.0);
+    vec4 lightProjPos = lightProj * vec4(lightPos.xyz, 1.0);
+    vec2 lightDeviceNormal = lightProjPos.xy / lightProjPos.w;
+    vec2 lightUV = lightDeviceNormal * 0.5 + 0.5;
+
+    float fragDepth = clamp(length(lightProjPos)/7.0, 0.0, 1.0);
+    float illuminated = VSM(uShadowMapSampler, lightUV, fragDepth - 0.01);
+
+    lighting = lighting * (illuminated * uShadowDepth + 1.0 - uShadowDepth);
+
     float textureAlpha = uTextureAlpha * texture.a;
     vec4 surfaceColor = texture * textureAlpha + vec4(uColor, 1.0) * (1.0 - textureAlpha);
     vec4 color = surfaceColor * vec4(lighting, 1.0) * (reflection * uShininess + (1.0 - uShininess));
     gl_FragColor = color;
-    // gl_FragColor = vec4(lightVector, 1.0); // just for debugging
+    // gl_FragColor = vec4(light, 1.0); // just for debugging
 }

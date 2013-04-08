@@ -1,7 +1,12 @@
 (function () {
     var canvas, gl, pl, map;
     var shininessSlider, smoothnessSlider, colorPick;
-    var textureAlpha, texturePicker;
+    var textureAlpha, bumpMapDepth, shadowDepth;
+    var textureDrop, bumpMapDrop;
+    var shadowBuffer, shadowTexture;
+    var downsample512, downsample256, boxFilter;
+
+    var supportDerivative;
 
     var panoObj;
 
@@ -33,6 +38,9 @@
     }
 
     function initGL () {
+        supportDerivative = gl.getExtension('OES_standard_derivatives');
+        if (!supportDerivative)
+            console.warn('Your browser does not support WebGL derivatives');
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
@@ -43,11 +51,41 @@
         teapot.texture = textures[0];
         teapot.bumpMap = textures[0];
 
+        initShadowBuffer();
+
         updateTextures();
 
         if (frameRequested) { return; }
         window.requestAnimFrame(drawScene);
         frameRequested = true;
+    }
+
+    function initShadowBuffer () {
+        shadowBuffer = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, shadowBuffer);
+        shadowBuffer.width = 1024;
+        shadowBuffer.height = 1024;
+
+        shadowTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, shadowTexture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, shadowBuffer.width, shadowBuffer.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+        var renderbuffer = gl.createRenderbuffer();
+        gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, shadowBuffer.width, shadowBuffer.height);
+
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, shadowTexture, 0);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
+
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        downsample512 = new Filter(gl, 512, 'return get(0.0, 0.0);');
+        downsample256 = new Filter(gl, 256, 'return get(0.0, 0.0);');
+        boxFilter = new Filter(gl, 256, 'vec3 result = vec3(0.0);for(int x=-1; x<=1; x++){for(int y=-1; y<=1; y++){result += get(x,y);}}return result/9.0;');
     }
 
     function initMap () {
@@ -67,18 +105,19 @@
         panoObj.setPosition(siebel);
     }
 
-    function initGPlus () {
+    function initGPlus (page) {
+        page = page;
         gapi.client.setApiKey('AIzaSyDofKhNhouBpHTpcT76F8fwZTTeqecDCIo');
         gapi.client.load('plus', 'v1', function () {
-            var request = gapi.client.plus.activities.search({'query': 'photosphere', 'orderBy': 'recent', 'maxResults': 20});
+            var request = gapi.client.plus.activities.search({'query': 'photosphere', 'orderBy': 'recent', 'maxResults': 20, 'pageToken': page });
             request.execute(function (response) {
-                loadGPlusData(response.items);
+                loadGPlusData(response.items, response.nextPageToken);
             });
         });
     }
     window.initGPlus = initGPlus; // Google API SDK needs to call this
 
-    function loadGPlusData(items) {
+    function loadGPlusData(items, pageToken) {
         var gplus = document.querySelector('#gplus');
         items.forEach(function (item) {
             var image = imageDFS(item.object);
@@ -93,6 +132,14 @@
             gplus.appendChild(preview);
         });
 
+        gplus.removeEventListener('scroll', gplus.scrollListener);
+        gplus.scrollListener = function () {
+            if (gplus.scrollTop + gplus.offsetHeight >= gplus.scrollHeight) {
+                initGPlus(pageToken);
+            }
+        };
+        gplus.addEventListener('scroll', gplus.scrollListener);
+
         function imageDFS(object) {
             // if (object.fullImage) { return object.fullImage; }
             if (object.image) { return object.image; }
@@ -104,7 +151,7 @@
 
     function init () {
         canvas = document.querySelector('#canvas');
-        canvas.width = document.body.clientWidth - 210;
+        canvas.width = document.body.clientWidth - 250;
         canvas.height = document.body.clientHeight;
         try {
             gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -152,10 +199,45 @@
         if (lastDraw && drawTime % 4 < 1) { fps.textContent = Math.round(1000/(drawTime - lastDraw)); }
         lastDraw = drawTime;
 
+        var rotation = (animateTeapot) ? (drawTime - startTime) * 0.03 : 180;
+        var uniforms = {
+            shininess: shininessSlider.value,
+            smoothness: smoothnessSlider.value,
+            color: hexToRgb(colorPick.value),
+            textureAlpha: textureAlpha.value,
+            bumpMapDepth: bumpMapDepth.value,
+            shadowDepth: shadowDepth.value,
+            lightVector: [0.5, 3.0, 0.5]
+        };
+
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        pl.perspective(45, canvas.width / canvas.height, 0.1, 100.0);
+        pl.perspective(60, 1, 0.01, 100.0);
         pl.loadIdentity();
 
+        // Draw shadow
+        if (supportDerivative) {
+            gl.viewport(0, 0, shadowBuffer.width, shadowBuffer.height);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, shadowBuffer);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            var lightVector = uniforms.lightVector;
+            
+            pl.lookAt(lightVector, [0, 0, 0], [0, 1, 0]);
+            pl.pushMatrix();
+            teapot.drawShadow(rotation, uniforms);
+            pl.popMatrix();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            // teapot.drawShadow(rotation, uniforms);
+            downsample512.apply(shadowTexture);
+            downsample256.apply(downsample512.output);
+            boxFilter.apply(downsample256.output);
+        }
+        // window.requestAnimFrame(drawScene);
+        // return;
+
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        pl.perspective(60, canvas.width / canvas.height, 0.1, 100.0);
+        pl.loadIdentity();
 
         pl.translate([0.0, 0.0, zoom]);
         pl.rotate(pitch, [1, 0, 0]);
@@ -168,15 +250,7 @@
         pl.popMatrix();
 
         {
-            var rotation = (animateTeapot) ? (drawTime - startTime) * 0.03 : 0;
-            var uniforms = {
-                shininess: shininessSlider.value,
-                smoothness: smoothnessSlider.value,
-                color: hexToRgb(colorPick.value),
-                textureAlpha: textureAlpha.value,
-                bumpMapDepth: bumpMapDepth.value
-            };
-            teapot.draw(rotation, yaw, pitch, uniforms);
+            teapot.draw(rotation, yaw, pitch, boxFilter.output, uniforms);
         }
 
         window.requestAnimFrame(drawScene);
@@ -187,9 +261,8 @@
      */
 
     function resize () {
-        canvas.width = document.body.clientWidth - 210;
+        canvas.width = document.body.clientWidth - 250;
         canvas.height = document.body.clientHeight;
-        gl.viewport(0, 0, canvas.width, canvas.height);
     }
 
     function mousedown (event) {
@@ -211,11 +284,11 @@
     }
 
     function keypress (event) {
-        if (event.keyCode === 32) {
+        if (event.charCode === 32) {
             animateTeapot = !animateTeapot;
-        } else if (event.keyCode === 61) {
+        } else if (event.charCode === 61) {
             zoom += 1;
-        } else if (event.keyCode === 45) {
+        } else if (event.charCode === 45) {
             zoom -= 1;
         }
     }
@@ -238,39 +311,17 @@
         'textures/fur.jpg',
         'textures/world.jpg'
     ];
-    var bumpMaps = textures;
 
-    function addExternalTexture (url) {
-        var img = new Image();
-        img.addEventListener('load', function () {
-            var canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 512;
-            var context = canvas.getContext('2d');
-            var dimension = Math.min(img.width, img.height);
-            context.drawImage(img, 0, 0, 512, 512);
-            url = canvas.toDataURL();
-            addTexture(url, true);
-            teapot.texture = url;
-        });
-        img.crossOrigin = 'Anonymous';
-        img.src = cors + url;
-    }
-
-    function addTexture (url, external) {
-        var img = document.createElement('img');
-        img.src = url;
-        img.addEventListener('click', function () {
-            teapot.texture = url;
-        });
-        if (external === true) {
-            texturePicker.insertBefore(img, texturePicker.lastChild);
-        } else {
-            texturePicker.appendChild(img);
+    function processExternalImage (url, callback) {
+        // console.log(url, location.origin);
+        if (url.indexOf(location.host) > -1) {
+            // The URL is already safe
+            console.log('safe URL');
+            callback(url);
+            return;
         }
-    }
 
-    function addExternalBumpMap (url) {
+        // Do some CORS magic, and crop the picture
         var img = new Image();
         img.addEventListener('load', function () {
             var canvas = document.createElement('canvas');
@@ -280,46 +331,83 @@
             var dimension = Math.min(img.width, img.height);
             context.drawImage(img, 0, 0, 512, 512);
             url = canvas.toDataURL();
-            addBumpMap(url, true);
-            teapot.bumpMap = url;
+            callback(url);
+
+            var libraryItem = document.createElement('img');
+            libraryItem.src = url;
+            document.querySelector('#imageLibrary').appendChild(libraryItem);
+        });
+        img.addEventListener('error', function (event) {
+            throw 'Cannot load image: ' + img.src;
         });
         img.crossOrigin = 'Anonymous';
         img.src = cors + url;
     }
 
-    function addBumpMap (url, external) {
+    function addImageToLibrary (url, external) {
+        var library = document.querySelector('#imageLibrary');
         var img = document.createElement('img');
         img.src = url;
-        img.addEventListener('click', function () {
-            teapot.bumpMap = url;
-        });
         if (external === true) {
-            bumpMapPicker.insertBefore(img, bumpMapPicker.lastChild);
+            library.insertBefore(img, texturePicker.lastChild);
         } else {
-            bumpMapPicker.appendChild(img);
+            library.appendChild(img);
         }
     }
 
     function initTeapotOptions() {
         texturePicker = document.querySelector('#texturePicker');
-        textures.forEach(addTexture);
-        var addTextureBtn = document.createElement('img');
-        addTextureBtn.src = 'textures/add.png';
-        texturePicker.appendChild(addTextureBtn);
-        addTextureBtn.addEventListener('click', function () {
-            var url = prompt('Enter the URL of the texture:');
-            addExternalTexture(url);
+        textures.forEach(addImageToLibrary);
+        // var addTextureBtn = document.createElement('img');
+        // addTextureBtn.src = 'textures/add.png';
+        // texturePicker.appendChild(addTextureBtn);
+
+        textureDrop = document.querySelector('#textureDrop');
+
+        textureDrop.addEventListener('dragenter', function (event) {
+            var types = Array.prototype.slice.call(event.dataTransfer.types);
+            if (types.indexOf('text') > -1)
+                event.preventDefault();
+        });
+        textureDrop.addEventListener('dragover', function (event) { event.preventDefault(); });
+        textureDrop.addEventListener('drop', function (event) {
+            var url = event.dataTransfer.getData('text') || event.dataTransfer.getData('text/uri-list');
+            if (url) {
+                processExternalImage(url, setTexture);
+                event.dropEffect = 'copy';
+                event.preventDefault();
+            } else {
+                alert('No supported image URLs');
+            }
         });
 
-        bumpMapPicker = document.querySelector('#bumpMapPicker');
-        bumpMaps.forEach(addBumpMap);
-        var addBumpMapBtn = document.createElement('img');
-        addBumpMapBtn.src = 'textures/add.png';
-        bumpMapPicker.appendChild(addBumpMapBtn);
-        addBumpMapBtn.addEventListener('click', function () {
-            var url = prompt('Enter the URL of the texture');
-            addExternalBumpMap(url);
+        bumpMapDrop = document.querySelector('#bumpMapDrop');
+        bumpMapDrop.addEventListener('dragenter', function (event) {
+            var types = Array.prototype.slice.call(event.dataTransfer.types);
+            if (types.indexOf('text') > -1)
+                event.preventDefault();
         });
+        bumpMapDrop.addEventListener('dragover', function (event) { event.preventDefault(); });
+        bumpMapDrop.addEventListener('drop', function (event) {
+            var url = event.dataTransfer.getData('text') || event.dataTransfer.getData('text/uri-list');
+            if (url) {
+                processExternalImage(url, setBumpMap);
+                event.dropEffect = 'copy';
+                event.preventDefault();
+            } else {
+                alert('No supported image URLs');
+            }
+        });
+    }
+
+    function setTexture (url) {
+        teapot.texture = url;
+        textureDrop.querySelector('.preview').style.backgroundImage = 'url(' + url + ')';
+    }
+
+    function setBumpMap (url) {
+        teapot.bumpMap = url;
+        bumpMapDrop.querySelector('.preview').style.backgroundImage = 'url(' + url + ')';
     }
 
     function initEventHandlers () {
@@ -336,10 +424,19 @@
         $('#colorpicker').farbtastic('#color');
         textureAlpha = document.querySelector('#textureAlpha');
         bumpMapDepth = document.querySelector('#bumpMapDepth');
+        shadowDepth = document.querySelector('#shadowDepth');
 
         document.querySelector('#changeEnvironment').addEventListener('click', changeEnvironment);
 
-        smoothnessSlider.addEventListener('mouseup', updateTextures);
+        smoothnessSlider.onchange = function (event) {
+            window.clearTimeout(smoothnessSlider.timeout);
+            smoothnessSlider.timeout = window.setTimeout(function () {
+                updateTextures();
+            }, 200);
+        };
+        window.smoothnessSlider = smoothnessSlider;
+
+        document.addEventListener('drop', function (event) { event.preventDefault(); });
     }
 
     document.addEventListener('DOMContentLoaded', init);

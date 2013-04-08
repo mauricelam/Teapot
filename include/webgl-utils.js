@@ -165,6 +165,7 @@ var createShaderFromScript = function(
 
 /* export functions */
 this.createProgram = loadProgram;
+this.loadShader = loadShader;
 this.createShaderFromScriptElement = createShaderFromScript;
 
 /**

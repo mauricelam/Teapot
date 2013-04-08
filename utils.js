@@ -48,22 +48,23 @@ function hexToRgb(hex) {
 // augment Sylvester some
 Matrix.Translation = function (v)
 {
-  if (v.elements.length == 2) {
-    var r = Matrix.I(3);
-    r.elements[2][0] = v.elements[0];
-    r.elements[2][1] = v.elements[1];
-    return r;
-  }
+    var r;
+    if (v.elements.length == 2) {
+        r = Matrix.I(3);
+        r.elements[2][0] = v.elements[0];
+        r.elements[2][1] = v.elements[1];
+        return r;
+    }
 
-  if (v.elements.length == 3) {
-    var r = Matrix.I(4);
-    r.elements[0][3] = v.elements[0];
-    r.elements[1][3] = v.elements[1];
-    r.elements[2][3] = v.elements[2];
-    return r;
-  }
+    if (v.elements.length == 3) {
+        r = Matrix.I(4);
+        r.elements[0][3] = v.elements[0];
+        r.elements[1][3] = v.elements[1];
+        r.elements[2][3] = v.elements[2];
+        return r;
+    }
 
-  throw "Invalid length for Translation";
+    throw "Invalid length for Translation";
 };
 
 Matrix.prototype.flatten = function ()
@@ -155,8 +156,6 @@ function makeLookAt(ex, ey, ez,
     var center = $V([cx, cy, cz]);
     var up = $V([ux, uy, uz]);
 
-    var mag;
-
     var z = eye.subtract(center).toUnitVector();
     var x = up.cross(z).toUnitVector();
     var y = z.cross(x).toUnitVector();
@@ -238,3 +237,15 @@ function makeOrtho(left, right, bottom, top, znear, zfar)
            [0, 0, 0, 1]]);
 }
 
+// Polyfill for Array.indexOf
+[].indexOf||(Array.prototype.indexOf=function(a,b,c){for(c=this.length,b=(c+~~b)%c;b<c&&(!(b in this)||this[b]!==a);b++);return b^c?b:-1;});
+
+// Polyfill for performance API
+(function () {
+    window.performance = window.performance || {};
+    window.performance.now = window.performance.now ||
+                            window.performance.webkitNow ||
+                            window.performance.msNow ||
+                            window.performance.mozNow ||
+                            Date.now;
+})();

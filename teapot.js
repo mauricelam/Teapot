@@ -1,12 +1,15 @@
 var teapot;
 
 (function () {
-    var gl, pl, program;
+    var gl, pl, program, shadowProgram;
     var vertexBuffer, vertexIndexBuffer, normalBuffer;
     var vertexPositionAttribute, vertexNormalAttribute;
+    var shadowPositionAttribute;
     var texture, reflectionTexture, bumpMapTexture;
     var textureImage, bumpMapImage;
-    var maxBrightness, averageBrightness, lightVector;
+    var maxBrightness, averageBrightness;
+
+    var lightPMatrix, lightMVMatrix;
 
     function initBuffers () {
         var obj = loadObjFile('models/teapot.obj');
@@ -40,11 +43,13 @@ var teapot;
         var fragmentShader = createShaderFromScriptElement(gl, 'potshader-f');
         program = createProgram(gl, [vertexShader, fragmentShader]);
 
-        vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
-        gl.enableVertexAttribArray(vertexPositionAttribute);
+        vertexShader = createShaderFromScriptElement(gl, 'shadowshader-v');
+        fragmentShader = createShaderFromScriptElement(gl, 'shadowshader-f');
+        shadowProgram = createProgram(gl, [vertexShader, fragmentShader]);
 
+        shadowPositionAttribute = gl.getAttribLocation(shadowProgram, 'aPosition');
+        vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
         vertexNormalAttribute = gl.getAttribLocation(program, 'aVertexNormal');
-        gl.enableVertexAttribArray(vertexNormalAttribute);
     }
 
     function initTexture () {
@@ -91,9 +96,44 @@ var teapot;
         initTexture();
     }
 
-    function draw (modelRotation, yaw, pitch, uniforms) {
+    function drawShadow (modelRotation, uniforms) {
+        gl.useProgram(shadowProgram);
+        pl.shader = shadowProgram;
+
+        gl.enable(gl.CULL_FACE);
+        gl.cullFace(gl.BACK);
+
+        gl.enableVertexAttribArray(shadowPositionAttribute);
+        pl.rotate(modelRotation, [0, 1, 0]);
+
+        // For teapot
+        pl.scale([0.5, 0.65, 0.5]);
+        pl.translate([0.0, -1.5, 0.0]);
+
+        // Hook up the buffers
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.vertexAttribPointer(shadowPositionAttribute, vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        pl.prepareDraw();
+        pl.setUniforms(uniforms);
+
+        lightPMatrix = pl.pMatrix.flatten();
+        lightMVMatrix = pl.modelView.flatten();
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
+        gl.drawElements(gl.TRIANGLES, vertexIndexBuffer.numItems * vertexIndexBuffer.itemSize, gl.UNSIGNED_SHORT, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+        gl.disable(gl.CULL_FACE);
+
+        gl.disableVertexAttribArray(shadowPositionAttribute);
+    }
+
+    function draw (modelRotation, yaw, pitch, shadowTexture, uniforms) {
         gl.useProgram(program);
         pl.shader = program;
+        gl.enableVertexAttribArray(vertexNormalAttribute);
+        gl.enableVertexAttribArray(vertexPositionAttribute);
 
         pl.rotate(modelRotation, [0, 1, 0]);
 
@@ -121,31 +161,31 @@ var teapot;
         gl.bindTexture(gl.TEXTURE_2D, bumpMapTexture);
         gl.uniform1i(gl.getUniformLocation(program, 'uBumpMapSampler'), 2);
 
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, shadowTexture);
+        gl.uniform1i(gl.getUniformLocation(program, 'uShadowMapSampler'), 3);
+
+        var lightProj = gl.getUniformLocation(program, 'lightProj');
+        gl.uniformMatrix4fv(lightProj, false, new Float32Array(lightPMatrix));
+
+        var lightView = gl.getUniformLocation(program, 'lightView');
+        gl.uniformMatrix4fv(lightView, false, new Float32Array(lightMVMatrix));
 
         pl.prepareDraw();
 
         uniforms.maxBrightness = maxBrightness;
         uniforms.averageBrightness = averageBrightness;
-        uniforms.lightVector = [0.5, 2.0, 0.5];
-        for (var i in uniforms) {
-            var varName = 'u' + i.charAt(0).toUpperCase() + i.slice(1);
-            var location = gl.getUniformLocation(program, varName);
-            var value = uniforms[i];
-            if (typeof value === 'number' || typeof value === 'string') {
-                gl.uniform1f(location, value);
-            } else if (Array.isArray(value)) {
-                gl['uniform' + value.length + 'fv'](location, value);
-            } else {
-                throw 'Unsupported uniform type';
-            }
-        }
+        pl.setUniforms(uniforms);
 
         var rotUniform = gl.getUniformLocation(program, 'uRotations');
         gl.uniform2fv(rotUniform, [yaw, pitch]);
 
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
         gl.drawElements(gl.TRIANGLES, vertexIndexBuffer.numItems * vertexIndexBuffer.itemSize, gl.UNSIGNED_SHORT, 0);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+        gl.disableVertexAttribArray(vertexNormalAttribute);
+        gl.disableVertexAttribArray(vertexPositionAttribute);
     }
 
     function setReflectionCanvas (canvas) {
@@ -172,6 +212,7 @@ var teapot;
     teapot = {
         init: init,
         draw: draw,
+        drawShadow: drawShadow,
         setReflectionCanvas: setReflectionCanvas,
         set texture(url) { textureImage.src = url; },
         set bumpMap(url) { bumpMapImage.src = url; }

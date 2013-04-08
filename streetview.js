@@ -34,10 +34,7 @@ var streetView;
         program = createProgram(gl, [vertexShader, fragShader]);
 
         vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
-        gl.enableVertexAttribArray(vertexPositionAttribute);
-
         vertexTextureAttribute = gl.getAttribLocation(program, 'aTextureCoord');
-        gl.enableVertexAttribArray(vertexTextureAttribute);
     }
 
     function initTexture () {
@@ -63,6 +60,9 @@ var streetView;
         gl.useProgram(program);
         pl.shader = program;
 
+        gl.enableVertexAttribArray(vertexPositionAttribute);
+        gl.enableVertexAttribArray(vertexTextureAttribute);
+
         pl.prepareDraw();
 
         gl.bindBuffer(gl.ARRAY_BUFFER, bgBuffer);
@@ -79,6 +79,9 @@ var streetView;
         gl.drawElements(gl.TRIANGLES, bgIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+        gl.disableVertexAttribArray(vertexPositionAttribute);
+        gl.disableVertexAttribArray(vertexTextureAttribute);
     }
 
     function setCanvas (canvas) {

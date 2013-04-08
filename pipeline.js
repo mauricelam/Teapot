@@ -15,6 +15,11 @@ var Pipeline;
         return pMatrix;
     }
 
+    function lookAt(eye, center, up) {
+        var mat = makeLookAt(eye[0], eye[1], eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
+        multMatrix(mat);
+    }
+
     function loadIdentity () {
         mvMatrix = Matrix.I(4);
         invMatrix = Matrix.I(4);
@@ -81,9 +86,25 @@ var Pipeline;
         multMatrix(m, m.transpose());
     }
 
+    function setUniforms (uniforms) {
+        for (var i in uniforms) {
+            var varName = 'u' + i.charAt(0).toUpperCase() + i.slice(1);
+            var location = gl.getUniformLocation(shader, varName);
+            var value = uniforms[i];
+            if (typeof value === 'number' || typeof value === 'string') {
+                gl.uniform1f(location, value);
+            } else if (Array.isArray(value)) {
+                gl['uniform' + value.length + 'fv'](location, value);
+            } else {
+                throw 'Unsupported uniform type';
+            }
+        }
+    }
+
     // functions and values to export
     Pipeline = {
         perspective: perspective,
+        lookAt: lookAt,
         loadIdentity: loadIdentity,
         multMatrix: multMatrix,
         translate: translate,
@@ -92,11 +113,13 @@ var Pipeline;
         popMatrix: popMatrix,
         rotate: rotate,
         scale: scale,
+        setUniforms: setUniforms,
         set gl (_gl) { gl = _gl; },
         get gl () { return gl; },
         set shader (_shader) { shader = _shader; },
         get shader () { return shader; },
         get modelView () { return mvMatrix; },
+        get pMatrix() { return pMatrix; },
         get normalMatrix () { return invMatrix.transpose(); }
     };
 

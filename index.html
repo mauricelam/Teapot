@@ -28,24 +28,27 @@
             <div id="colorpicker"></div>
             <div>Shininess<input id="shininess" type="range" max="1.0" step="0.01" value="0.5" /></div>
             <div>Blur<input id="smoothness" type="range" max="1.0" step="0.01" value="0.0" /></div>
-            <div>
+            <div>Shadow<input id="shadowDepth" type="range" max="1.0" step="0.01" value="0.2" /></div>
+            <div id="textureDrop">
+                <div class="preview"></div>
                 Texture
-                <div id="texturePicker"></div>
                 <input id="textureAlpha" type="range" max="1.0" step="0.01" value="0.5" />
             </div>
-            <div>
+            <div id="bumpMapDrop">
+                <div class="preview"></div>
                 Bump Map
-                <div id="bumpMapPicker"></div>
                 <input id="bumpMapDepth" type="range" min="-2.0" max="2.0" step="0.01" value="0.5" />
             </div>
+            Image Library
+            <div id="imageLibrary"></div>
         </section>
     </div>
 
     <canvas id="canvas">
         Your browser does not support canvas. Please use one that supports it, e.g. <a href="www.google.com/chrome/">Chrome</a>. 
     </canvas>
-    <script type="x-shader/x-vertex" id="tableshader-v" src="tableshader.vert"></script>
-    <script type="x-shader/x-fragment" id="tableshader-f" src="tableshader.frag"></script>
+    <script type="x-shader/x-vertex" id="shadowshader-v" src="shadowshader.vert"></script>
+    <script type="x-shader/x-fragment" id="shadowshader-f" src="shadowshader.frag"></script>
     <script type="x-shader/x-vertex" id="potshader-v" src="potshader.vert"></script>
     <script type="x-shader/x-fragment" id="potshader-f" src="potshader.frag"></script>
     <script type="x-shader/x-vertex" id="panoshader-v" src="panoshader.vert"></script>
@@ -60,6 +63,7 @@
     <script src="include/PanoLoader.js"></script>
     <script src="include/FastBlur.js"></script>
     <script src="utils.js"></script>
+    <script src="Filter.js"></script>
     <script src="sphere.js"></script>
     <script src="objparser.js"></script>
     <script src="pipeline.js"></script>
