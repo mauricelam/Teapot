@@ -10,18 +10,18 @@ eval(function(p,a,c,k,e,r){e=function(c){return(c<a?'':e(parseInt(c/a)))+((c=c%a
 Matrix.Translation = function (v)
 {
     var r;
-    if (v.elements.length == 2) {
+    if (v.length == 2) {
         r = Matrix.I(3);
-        r.elements[2][0] = v.elements[0];
-        r.elements[2][1] = v.elements[1];
+        r.elements[2][0] = v[0];
+        r.elements[2][1] = v[1];
         return r;
     }
 
-    if (v.elements.length == 3) {
+    if (v.length == 3) {
         r = Matrix.I(4);
-        r.elements[0][3] = v.elements[0];
-        r.elements[1][3] = v.elements[1];
-        r.elements[2][3] = v.elements[2];
+        r.elements[0][3] = v[0];
+        r.elements[1][3] = v[1];
+        r.elements[2][3] = v[2];
         return r;
     }
 

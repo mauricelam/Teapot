@@ -47,27 +47,21 @@ var Pipeline;
     /**
      * Simiar to glTranslate, but takes in an array instead of 3 doubles.
      */
-    function translate (v) {
-        multMatrix(Matrix.Translation($V([v[0], v[1], v[2]])).ensure4x4(),
-            Matrix.Translation($V([-v[0], -v[1], -v[2]])).ensure4x4());
+    function translate (vx, vy ,vz) {
+        multMatrix(
+            Matrix.Translation([vx, vy, vz]),
+            Matrix.Translation([-vx, -vy, -vz])
+        );
     }
 
     /**
      * Similar to glScale, but takes in an array instead of 3 doubles.
      */
-    function scale (s) {
-        multMatrix($M([
-            [s[0], 0, 0, 0],
-            [0, s[1], 0, 0],
-            [0, 0, s[2], 0],
-            [0, 0,    0, 1]
-        ]),
-        $M([
-            [1/s[0], 0, 0, 0],
-            [0, 1/s[1], 0, 0],
-            [0, 0, 1/s[2], 0],
-            [0, 0,      0, 1]
-        ]));
+    function scale (sx, sy, sz) {
+        multMatrix(
+            Matrix.Diagonal([sx, sy, sz, 1]),
+            Matrix.Diagonal([1/sx, 1/sy, 1/sz, 1])
+        );
     }
 
     /**
@@ -111,19 +105,19 @@ var Pipeline;
     function rotate (angle, v) {
         var inRadians = angle * Math.PI / 180.0;
 
-        var m = Matrix.Rotation(inRadians, $V([v[0], v[1], v[2]])).ensure4x4();
+        var m = Matrix.Rotation(inRadians, $V(v)).ensure4x4();
         multMatrix(m, m.transpose());
     }
 
     /**
      * Sets the uniforms specified in the `uniforms` object. Only supports floats, float vectors
-     * and float matrices. The name of the uniform will be prefixed with 'u'.
+     * and float matrices.
      *
      * Example:
      *     setUniforms({
-     *        lightViewMatrix: [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],
-     *        viewVector: [0,0,-1],
-     *        shininess: 16
+     *        uLightViewMatrix: [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],
+     *        uViewVector: [0,0,-1],
+     *        uShininess: 16
      *     });
      *
      *     -- shader --
@@ -134,10 +128,9 @@ var Pipeline;
      * Note: For matrices, the transpose argument is always false.
      */
     function setUniforms (uniforms) {
-        for (var i in uniforms) {
-            var varName = 'u' + i.charAt(0).toUpperCase() + i.slice(1);
-            var location = gl.getUniformLocation(shader, varName);
-            var value = uniforms[i];
+        for (var name in uniforms) {
+            var location = gl.getUniformLocation(shader, name);
+            var value = uniforms[name];
             if (typeof value === 'number' || typeof value === 'string') {
                 gl.uniform1f(location, value);
             } else if (Array.isArray(value)) {
@@ -154,17 +147,16 @@ var Pipeline;
 
     /**
      * Similar idea to setUniforms, sets all the textures automatically in the given object.
-     * Uniforms of this type if prefixed with 's' (for sampler). The start parameter specifies the
-     * start of the texture id to use, which it will use contiguously after that value. For example,
-     * if the start is 5 and there are 3 textures, textures 5, 6, 7 will be used.
+     * The start parameter specifies the start of the texture id to use, which it will use
+     * contiguously after that value. For example, if the start is 5 and there are 3 textures,
+     * textures 5, 6, 7 will be used.
      */
     function setTextures (textures, start) {
         var id = start || 0;
-        for (var i in textures) {
-            var varName = 's' + i.charAt(0).toUpperCase() + i.slice(1);
+        for (var name in textures) {
             gl.activeTexture(gl['TEXTURE' + id]);
-            gl.bindTexture(gl.TEXTURE_2D, textures[i]);
-            gl.uniform1i(gl.getUniformLocation(shader, varName), id);
+            gl.bindTexture(gl.TEXTURE_2D, textures[name]);
+            gl.uniform1i(gl.getUniformLocation(shader, name), id);
             id++;
         }
     }

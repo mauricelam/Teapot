@@ -74,7 +74,7 @@ var streetView;
         gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoords);
         gl.vertexAttribPointer(attributes.textureCoords, buffers.textureCoords.itemSize, gl.FLOAT, false, 0, 0);
 
-        pl.setTextures({ sampler: texture }, 0);
+        pl.setTextures({ sTexture: texture }, 0);
         pl.prepareDraw();
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);

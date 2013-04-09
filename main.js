@@ -16,7 +16,7 @@
     var animateTeapot = true, teapotRotation = 0;
 
     var startTime, lastDraw;
-    var downPos, pitch = 0.0, yaw = 0.0, panoRotation = 0;
+    var downPos, yawPitch = [0, 0], panoRotation = 0;
     var streetViewCanvas, originalStreetViewCanvas;
     var fps = document.querySelector('#fps');
     var zoom = -4.0;
@@ -195,11 +195,17 @@
             else
                 initGL();
             panoRotation = (this.rotation || 0) + 90;
-            panoObj.setPov({ heading: yaw + panoRotation, pitch: pitch });
+            panoObj.setPov({ heading: yawPitch[0] + panoRotation, pitch: yawPitch[1] });
         };
 
         loader.load(type, args);
     }
+
+    var uniforms = {};
+    var lightVector = [-2.0, 2.0, 4.0],
+        xAxis = [1,0,0],
+        yAxis = [0,1,0],
+        origin = [0,0,0];
 
     /**
      * Draw scene function. Executed on every frame.
@@ -212,15 +218,14 @@
         lastDraw = drawTime;
 
         if (animateTeapot) teapotRotation += 0.6;
-        var uniforms = {
-            shininess: controls.shininess.value,
-            smoothness: controls.reflectionBlur.value,
-            color: hexToRgb(controls.colorPick.value),
-            textureAlpha: controls.textureAlpha.value,
-            bumpMapDepth: controls.bumpMapDepth.value,
-            shadowDepth: controls.shadowDepth.value,
-            lightVector: [-2.0, 2.0, 4.0]
-        };
+
+        uniforms.uShininess = controls.shininess.value;
+        uniforms.uSmoothness = controls.reflectionBlur.value;
+        uniforms.uColor = hexToRgb(controls.colorPick.value);
+        uniforms.uTextureAlpha = controls.textureAlpha.value;
+        uniforms.uBumpMapDepth = controls.bumpMapDepth.value;
+        uniforms.uShadowDepth = controls.shadowDepth.value;
+        uniforms.uLightVector = lightVector;
 
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         pl.perspective(80, 1, 0.01, 100.0);
@@ -232,9 +237,7 @@
             gl.bindFramebuffer(gl.FRAMEBUFFER, shadowBuffer);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-            var lightVector = uniforms.lightVector;
-            
-            pl.lookAt(lightVector, [0, 0, 0], [0, 1, 0]);
+            pl.lookAt(lightVector, origin, yAxis);
             pl.pushMatrix();
             teapot.drawShadow(teapotRotation, uniforms);
             pl.popMatrix();
@@ -248,15 +251,15 @@
         pl.perspective(60, canvas.width / canvas.height, 0.1, 100.0);
         pl.loadIdentity();
 
-        pl.translate([0.0, 0.0, zoom]);
-        pl.rotate(pitch, [1, 0, 0]);
-        pl.rotate(yaw, [0, 1, 0]);
+        pl.translate(0, 0, zoom);
+        pl.rotate(yawPitch[1], xAxis);
+        pl.rotate(yawPitch[0], yAxis);
         
         pl.pushMatrix();
         streetView.draw();
         pl.popMatrix();
 
-        teapot.draw(teapotRotation, yaw, pitch, shadowTexture, uniforms);
+        teapot.draw(teapotRotation, yawPitch, shadowTexture, uniforms);
 
         // request next frame
         window.requestAnimFrame(drawScene);
@@ -405,10 +408,10 @@
 
     function mousemove (event) {
         if (downPos) {
-            yaw -= (event.pageX - downPos[0]) * 0.2;
-            pitch -= (event.pageY - downPos[1]) * 0.2;
+            yawPitch[0] -= (event.pageX - downPos[0]) * 0.2;
+            yawPitch[1] -= (event.pageY - downPos[1]) * 0.2;
             downPos = [event.pageX, event.pageY];
-            panoObj.setPov({ heading: yaw + panoRotation, pitch: pitch });
+            panoObj.setPov({ heading: yawPitch[0] + panoRotation, pitch: yawPitch[1] });
         }
     }
 

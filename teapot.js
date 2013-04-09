@@ -109,8 +109,8 @@ var teapot;
         pl.rotate(modelRotation, [0, 1, 0]);
 
         // For teapot
-        pl.scale([0.5, 0.65, 0.5]);
-        pl.translate([0.0, -1.5, 0.0]);
+        pl.scale(0.5, 0.65, 0.5);
+        pl.translate(0.0, -1.5, 0.0);
 
         // Hook up the buffers
         gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertex);
@@ -129,7 +129,7 @@ var teapot;
         gl.disableVertexAttribArray(attributes.shadowPositions);
     }
 
-    function draw (modelRotation, yaw, pitch, shadowTexture, uniforms) {
+    function draw (modelRotation, yawPitch, shadowTexture, uniforms) {
         gl.useProgram(program);
         pl.shader = program;
         gl.enableVertexAttribArray(attributes.normals);
@@ -138,8 +138,8 @@ var teapot;
         pl.rotate(modelRotation, [0, 1, 0]);
 
         // For teapot
-        pl.scale([0.5, 0.65, 0.5]);
-        pl.translate([0.0, -1.5, 0.0]);
+        pl.scale(0.5, 0.65, 0.5);
+        pl.translate(0.0, -1.5, 0.0);
 
         // Hook up the buffers
         gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertex);
@@ -150,23 +150,23 @@ var teapot;
 
         // Set up textures
         var shaderTextures = {
-            reflection: textures.reflection,
-            texture: textures.teapot,
-            bumpMap: textures.bumpMap,
-            shadowMap: shadowTexture
+            sReflection: textures.reflection,
+            sTexture: textures.teapot,
+            sBumpMap: textures.bumpMap,
+            sShadowMap: shadowTexture
         };
         pl.setTextures(shaderTextures, 0);
 
         pl.prepareDraw();
 
-        uniforms.lightProj = lightPMatrix;
-        uniforms.lightView = lightMVMatrix;
-        uniforms.maxBrightness = maxBrightness;
-        uniforms.averageBrightness = averageBrightness;
+        uniforms.uLightProj = lightPMatrix;
+        uniforms.uLightView = lightMVMatrix;
+        uniforms.uMaxBrightness = maxBrightness;
+        uniforms.uAverageBrightness = averageBrightness;
         pl.setUniforms(uniforms);
 
         var rotUniform = gl.getUniformLocation(program, 'uRotations');
-        gl.uniform2fv(rotUniform, [yaw, pitch]);
+        gl.uniform2fv(rotUniform, yawPitch);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
         gl.drawElements(gl.TRIANGLES, buffers.indices.numItems * buffers.indices.itemSize, gl.UNSIGNED_SHORT, 0);
