@@ -178,7 +178,7 @@ section#environments > div {
     width: 50px;
     cursor: url(http://maps.gstatic.com/mapfiles/openhand_8_8.cur) 8 8, default;
     margin: 0 3px;
-    background: #444;
+    background: url('textures/empty.png');
 }
 
 #textureDrop, #bumpMapDrop {
@@ -209,4 +209,13 @@ section#environments > div {
     height: 500px;
     border: 0 none;
     background-color: white;
+}
+
+#addImage {
+    color: #0084B4;
+    text-decoration: none;
+}
+
+#addImage:hover {
+    color: #00A4D4;
 }

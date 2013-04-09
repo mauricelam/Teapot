@@ -1,3 +1,8 @@
+/**
+ * Loads panoramas from Google street view or Google+. Google+ functionality added by Maurice Lam
+ * 
+ * Source: http://www.clicktorelease.com/code/streetViewReflectionMapping/
+ */
 var PanoLoader = function ( parameters ) {
 
     var _parameters = parameters;
@@ -108,12 +113,6 @@ var PanoLoader = function ( parameters ) {
         var imageComponents = imageUrl.split('/');
         imageComponents[imageComponents.length - 2] = 'w3200';
         img.src = imageComponents.join('/');
-        console.log(img.src);
-        // this.buildUrl = function (x, y) {
-        //     var url = imageUrl.split('/').slice(0, -2).join('/') + '/';
-        //     return url + 'x' + x + '-y' + y + '-z' + _zoom + '/';
-        // };
-        // this.composePanorama();
     };
 
     this.loadStreetView = function (location) {

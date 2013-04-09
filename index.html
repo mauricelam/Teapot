@@ -26,21 +26,23 @@
         <section>
             <div>Color<input id="color" type="text" value="#FFFFFF" /></div>
             <div id="colorpicker"></div>
-            <div>Shininess<input id="shininess" type="range" max="1.0" step="0.01" value="0.5" /></div>
-            <div>Blur<input id="smoothness" type="range" max="1.0" step="0.01" value="0.0" /></div>
-            <div>Shadow<input id="shadowDepth" type="range" max="1.0" step="0.01" value="0.2" /></div>
+            <div>Shininess<input id="shininess" type="range" max="1.0" step="0.01" value="0.8" /></div>
+            <div>Reflection Blur<input id="smoothness" type="range" max="1.0" step="0.01" value="0.6" /></div>
+            <div>Shadow<input id="shadowDepth" type="range" max="0.5" step="0.01" value="0.2" /></div>
             <div id="textureDrop">
                 <div class="preview"></div>
                 Texture
-                <input id="textureAlpha" type="range" max="1.0" step="0.01" value="0.5" />
+                <input id="textureAlpha" type="range" max="1.0" step="0.01" value="0.95" />
             </div>
             <div id="bumpMapDrop">
                 <div class="preview"></div>
                 Bump Map
-                <input id="bumpMapDepth" type="range" min="-2.0" max="2.0" step="0.01" value="0.5" />
+                <input id="bumpMapDepth" type="range" min="-3.0" max="3.0" step="0.01" value="2.0" />
             </div>
-            Image Library
+            Image Library<br />
+            <small>(Drag to texture or bump map)</small>
             <div id="imageLibrary"></div>
+            <a href="#" id="addImage">+ add</a>
         </section>
     </div>
 
@@ -54,22 +56,21 @@
     <script type="x-shader/x-vertex" id="panoshader-v" src="panoshader.vert"></script>
     <script type="x-shader/x-fragment" id="panoshader-f" src="panoshader.frag"></script>
 
-    <script src="//code.jquery.com/jquery-1.9.1.js"></script>
-    <script src="//maps.googleapis.com/maps/api/js?key=AIzaSyChR3A7b80MZL1F4QK43g8QpFNhqqG7SUg&sensor=false&language=en"></script>
+    <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+    <script src="http://maps.googleapis.com/maps/api/js?key=AIzaSyChR3A7b80MZL1F4QK43g8QpFNhqqG7SUg&sensor=false&language=en"></script>
     <script src="include/sylvester/sylvester.js"></script>
     <script src="include/farbtastic/farbtastic.js"></script>
     <script src="include/slider/fd-slider.min.js"></script>
     <script src="include/webgl-utils.js"></script>
     <script src="include/PanoLoader.js"></script>
     <script src="include/FastBlur.js"></script>
+    <script src="include/sphere.js"></script>
     <script src="utils.js"></script>
-    <script src="Filter.js"></script>
-    <script src="sphere.js"></script>
     <script src="objparser.js"></script>
     <script src="pipeline.js"></script>
     <script src="streetview.js"></script>
     <script src="teapot.js"></script>
     <script src="main.js"></script>
-    <script src="//apis.google.com/js/client.js?onload=initGPlus"></script>
+    <script src="http://apis.google.com/js/client.js?onload=initGPlus"></script>
 </body>
 </html>

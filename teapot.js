@@ -1,41 +1,41 @@
+/**
+ * This file is responsible for the teapot. Includes the teapot's own shader program, 
+ */
+
 var teapot;
 
 (function () {
     var gl, pl, program, shadowProgram;
-    var vertexBuffer, vertexIndexBuffer, normalBuffer;
-    var vertexPositionAttribute, vertexNormalAttribute;
-    var shadowPositionAttribute;
-    var texture, reflectionTexture, bumpMapTexture;
+    var buffers = {}, attributes = {}, textures = {};
     var textureImage, bumpMapImage;
     var maxBrightness, averageBrightness;
 
     var lightPMatrix, lightMVMatrix;
 
     function initBuffers () {
-        var obj = loadObjFile('models/teapot.obj');
+        var obj = loadObjFile('teapot.obj');
         normals = computeNormals(obj.vertices, obj.faces);
-        console.log(obj);
 
         // Vertex buffer
-        vertexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        buffers.vertex = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertex);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(obj.vertices), gl.STATIC_DRAW);
-        vertexBuffer.itemSize = 3;
-        vertexBuffer.numItems = obj.vertices.length / 3;
+        buffers.vertex.itemSize = 3;
+        buffers.vertex.numItems = obj.vertices.length / 3;
 
         // Vertex index (faces) buffer
-        vertexIndexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
+        buffers.indices = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(obj.faces), gl.STATIC_DRAW);
-        vertexIndexBuffer.itemSize = 3;
-        vertexIndexBuffer.numItems = obj.faces.length / 3;
+        buffers.indices.itemSize = 3;
+        buffers.indices.numItems = obj.faces.length / 3;
 
         // Normal vectors buffer
-        normalBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+        buffers.normals = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normals);
         gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
-        normalBuffer.itemSize = 3;
-        normalBuffer.numItems = normals.length / 3;
+        buffers.normals.itemSize = 3;
+        buffers.normals.numItems = normals.length / 3;
     }
 
     function initShader () {
@@ -47,14 +47,15 @@ var teapot;
         fragmentShader = createShaderFromScriptElement(gl, 'shadowshader-f');
         shadowProgram = createProgram(gl, [vertexShader, fragmentShader]);
 
-        shadowPositionAttribute = gl.getAttribLocation(shadowProgram, 'aPosition');
-        vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
-        vertexNormalAttribute = gl.getAttribLocation(program, 'aVertexNormal');
+        attributes.shadowPositions = gl.getAttribLocation(shadowProgram, 'aPosition');
+        attributes.positions = gl.getAttribLocation(program, 'aVertexPosition');
+        attributes.normals = gl.getAttribLocation(program, 'aVertexNormal');
     }
 
     function initTexture () {
-        reflectionTexture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, reflectionTexture);
+        // Texture of the environment
+        textures.reflection = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, textures.reflection);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -62,27 +63,29 @@ var teapot;
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-        texture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, texture);
+        // Texture on the teapot itself
+        textures.teapot = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, textures.teapot);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 
         textureImage = new Image();
         textureImage.addEventListener('load', function () {
-            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.bindTexture(gl.TEXTURE_2D, textures.teapot);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureImage);
         });
 
-        bumpMapTexture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, bumpMapTexture);
+        // Texture of the bump map
+        textures.bumpMap = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, textures.bumpMap);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 
         bumpMapImage = new Image();
         bumpMapImage.addEventListener('load', function () {
-            gl.bindTexture(gl.TEXTURE_2D, bumpMapTexture);
+            gl.bindTexture(gl.TEXTURE_2D, textures.bumpMap);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bumpMapImage);
         });
     }
@@ -100,10 +103,9 @@ var teapot;
         gl.useProgram(shadowProgram);
         pl.shader = shadowProgram;
 
-        gl.enable(gl.CULL_FACE);
-        gl.cullFace(gl.BACK);
+        gl.clearColor(1, 1, 1, 1);
 
-        gl.enableVertexAttribArray(shadowPositionAttribute);
+        gl.enableVertexAttribArray(attributes.shadowPositions);
         pl.rotate(modelRotation, [0, 1, 0]);
 
         // For teapot
@@ -111,8 +113,8 @@ var teapot;
         pl.translate([0.0, -1.5, 0.0]);
 
         // Hook up the buffers
-        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-        gl.vertexAttribPointer(shadowPositionAttribute, vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertex);
+        gl.vertexAttribPointer(attributes.shadowPositions, buffers.vertex.itemSize, gl.FLOAT, false, 0, 0);
 
         pl.prepareDraw();
         pl.setUniforms(uniforms);
@@ -120,20 +122,18 @@ var teapot;
         lightPMatrix = pl.pMatrix.flatten();
         lightMVMatrix = pl.modelView.flatten();
 
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
-        gl.drawElements(gl.TRIANGLES, vertexIndexBuffer.numItems * vertexIndexBuffer.itemSize, gl.UNSIGNED_SHORT, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+        gl.drawElements(gl.TRIANGLES, buffers.indices.numItems * buffers.indices.itemSize, gl.UNSIGNED_SHORT, 0);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-        gl.disable(gl.CULL_FACE);
-
-        gl.disableVertexAttribArray(shadowPositionAttribute);
+        gl.disableVertexAttribArray(attributes.shadowPositions);
     }
 
     function draw (modelRotation, yaw, pitch, shadowTexture, uniforms) {
         gl.useProgram(program);
         pl.shader = program;
-        gl.enableVertexAttribArray(vertexNormalAttribute);
-        gl.enableVertexAttribArray(vertexPositionAttribute);
+        gl.enableVertexAttribArray(attributes.normals);
+        gl.enableVertexAttribArray(attributes.positions);
 
         pl.rotate(modelRotation, [0, 1, 0]);
 
@@ -142,37 +142,25 @@ var teapot;
         pl.translate([0.0, -1.5, 0.0]);
 
         // Hook up the buffers
-        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-        gl.vertexAttribPointer(vertexPositionAttribute, vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertex);
+        gl.vertexAttribPointer(attributes.positions, buffers.vertex.itemSize, gl.FLOAT, false, 0, 0);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-        gl.vertexAttribPointer(vertexNormalAttribute, normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normals);
+        gl.vertexAttribPointer(attributes.normals, buffers.normals.itemSize, gl.FLOAT, false, 0, 0);
 
         // Set up textures
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, reflectionTexture);
-        gl.uniform1i(gl.getUniformLocation(program, 'uReflectionSampler'), 0);
-
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.uniform1i(gl.getUniformLocation(program, 'uTextureSampler'), 1);
-
-        gl.activeTexture(gl.TEXTURE2);
-        gl.bindTexture(gl.TEXTURE_2D, bumpMapTexture);
-        gl.uniform1i(gl.getUniformLocation(program, 'uBumpMapSampler'), 2);
-
-        gl.activeTexture(gl.TEXTURE3);
-        gl.bindTexture(gl.TEXTURE_2D, shadowTexture);
-        gl.uniform1i(gl.getUniformLocation(program, 'uShadowMapSampler'), 3);
-
-        var lightProj = gl.getUniformLocation(program, 'lightProj');
-        gl.uniformMatrix4fv(lightProj, false, new Float32Array(lightPMatrix));
-
-        var lightView = gl.getUniformLocation(program, 'lightView');
-        gl.uniformMatrix4fv(lightView, false, new Float32Array(lightMVMatrix));
+        var shaderTextures = {
+            reflection: textures.reflection,
+            texture: textures.teapot,
+            bumpMap: textures.bumpMap,
+            shadowMap: shadowTexture
+        };
+        pl.setTextures(shaderTextures, 0);
 
         pl.prepareDraw();
 
+        uniforms.lightProj = lightPMatrix;
+        uniforms.lightView = lightMVMatrix;
         uniforms.maxBrightness = maxBrightness;
         uniforms.averageBrightness = averageBrightness;
         pl.setUniforms(uniforms);
@@ -180,18 +168,24 @@ var teapot;
         var rotUniform = gl.getUniformLocation(program, 'uRotations');
         gl.uniform2fv(rotUniform, [yaw, pitch]);
 
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
-        gl.drawElements(gl.TRIANGLES, vertexIndexBuffer.numItems * vertexIndexBuffer.itemSize, gl.UNSIGNED_SHORT, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+        gl.drawElements(gl.TRIANGLES, buffers.indices.numItems * buffers.indices.itemSize, gl.UNSIGNED_SHORT, 0);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-        gl.disableVertexAttribArray(vertexNormalAttribute);
-        gl.disableVertexAttribArray(vertexPositionAttribute);
+        gl.disableVertexAttribArray(attributes.normals);
+        gl.disableVertexAttribArray(attributes.positions);
     }
 
+    /**
+     * Sets the reflection texture by passing in a canvas that contains the image. This function
+     * puts the image in but also calculates the maximum and average brightness for lighting.
+     */
     function setReflectionCanvas (canvas) {
-        gl.bindTexture(gl.TEXTURE_2D, reflectionTexture);
-        var context = canvas.getContext('2d');
+        gl.bindTexture(gl.TEXTURE_2D, textures.reflection);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+
+        // Calculate max and average brightness
+        var context = canvas.getContext('2d');
         var data = context.getImageData(0, 0, canvas.width, canvas.height);
         maxBrightness = 0;
         var totalBrightness = 0;
@@ -200,9 +194,7 @@ var teapot;
                 var i = (y * width + x) * 4;
                 // Note that this ignores the alpha value
                 var brightness = (data.data[i] + data.data[i+1] + data.data[i+2]) / (255 * 3);
-                if (brightness > maxBrightness) {
-                    maxBrightness = brightness;
-                }
+                maxBrightness = Math.max(maxBrightness, brightness);
                 totalBrightness += brightness;
             }
         }

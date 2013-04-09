@@ -3,11 +3,11 @@
 precision mediump float;
 
 varying vec3 vVertexPosition;
-
-uniform mat4 uMVMatrix;
-uniform mat4 uPMatrix;
+uniform mat4 uMVMatrix, uPMatrix;
 
 void main(void) {
+    // VSM shadow mapping 
+    // http://codeflow.org/entries/2013/feb/15/soft-shadow-mapping/
     vec4 pos = uPMatrix * uMVMatrix * vec4(vVertexPosition, 1.0);
     float depth = clamp(length(pos)/7.0, 0.0, 1.0);
     float dx = dFdx(depth);
