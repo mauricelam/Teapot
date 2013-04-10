@@ -9,8 +9,6 @@
     var textureDrop, bumpMapDrop;
     var shadowBuffer, shadowTexture;
 
-    var supportDerivative;
-
     var panoObj;
 
     var animateTeapot = true, teapotRotation = 0;
@@ -42,8 +40,8 @@
     }
 
     function initGL () {
-        supportDerivative = gl.getExtension('OES_standard_derivatives');
-        if (!supportDerivative)
+        gl.supportDerivatives = gl.getExtension('OES_standard_derivatives');
+        if (!gl.supportDerivatives)
             console.warn('Your browser does not support WebGL derivatives. Shadows will not be rendered');
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.enable(gl.DEPTH_TEST);
@@ -110,7 +108,7 @@
      * Load the content of #photospheres from Google+
      */
     function initGPlus (page) {
-        gapi.client.setApiKey('AIzaSyDofKhNhouBpHTpcT76F8fwZTTeqecDCIo');
+        gapi.client.setApiKey('AIzaSyDjetx8Cmd_03PuCUCuku5-ILxFsh9riPQ');
         gapi.client.load('plus', 'v1', function () {
             var request = gapi.client.plus.activities.search({'query': 'photosphere', 'orderBy': 'recent', 'maxResults': 20, 'pageToken': page });
             request.execute(function (response) {
@@ -232,7 +230,7 @@
         pl.loadIdentity();
 
         // Shadow pass
-        if (supportDerivative) {
+        if (gl.supportDerivatives) {
             gl.viewport(0, 0, shadowBuffer.width, shadowBuffer.height);
             gl.bindFramebuffer(gl.FRAMEBUFFER, shadowBuffer);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
