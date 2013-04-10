@@ -13,12 +13,15 @@ Javascript code, in rough order of importance
 - utils.js : simple library functions
 
 Shaders
-Teapot      - potshader.frag
-            - potshader.vert
-Panorama    - panoshader.frag
-            - panoshader.vert
-Shadow      - shadowshader.frag
-            - shadowshader.vert
+
+| Object      | Shaders           |
+| ----------- | ----------------- |
+| Teapot      | potshader.frag    |
+|             | potshader.vert    |
+| Panorama    | panoshader.frag   |
+|             | panoshader.vert   |
+| Shadow      | shadowshader.frag |
+|             | shadowshader.vert |
 
 Features
 - Phong lighting with dynamic light intensities based on environment brightness
