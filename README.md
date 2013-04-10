@@ -1,8 +1,6 @@
 --------------------------
-WebGL Teapot - Maurice Lam
+WebGL Teapot
 --------------------------
-Net ID: lam25
-3 credit hours
 
 It's the Utah teapot, stretched back to about its original height. With textures, shadows, bump maps and all the awesomeness. 
 
