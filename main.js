@@ -162,7 +162,7 @@
             gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
             gl.viewport(0, 0, canvas.width, canvas.height);
         } catch (e) {}
-        if (!gl) throw ('Could not initialize WebGL');
+        if (!gl) alert('Error: Could not initialize WebGL. Perhaps your browser does not support it. Try using Chrome instead. ');
         pl = Object.create(Pipeline);
         pl.gl = gl;
         initMap();
