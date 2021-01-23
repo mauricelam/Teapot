@@ -1,6 +1,6 @@
 /**
  * Loads panoramas from Google street view or Google+. Google+ functionality added by Maurice Lam
- * 
+ *
  * Source: http://www.clicktorelease.com/code/streetViewReflectionMapping/
  */
 var PanoLoader = function ( parameters ) {
@@ -18,14 +18,15 @@ var PanoLoader = function ( parameters ) {
     var _ctx;
     var _count = 0,
         _total = 0;
-    
+    var _tileSize = 512;
+
     _canvas = document.createElement( 'canvas' );
     _ctx = _canvas.getContext( '2d' );
     
     this.setProgress = function( p ) {
         if( this.onProgress ) this.onProgress( p );
     };
-    
+
     this.throwError = function( message ) {
         if( this.onError ) {
             this.onError( message );
@@ -34,11 +35,10 @@ var PanoLoader = function ( parameters ) {
             console.error( message );
         }
     };
-    
+
     this.adaptTextureToZoom = function(type) {
-        var scale = (type==='gplus') ? 512 : 416;
-        var w = scale * Math.pow( 2, _zoom );
-        var h = scale * Math.pow( 2, _zoom - 1 );
+        var w = _tileSize * Math.pow( 2, _zoom );
+        var h = _tileSize * Math.pow( 2, _zoom - 1 );
         _canvas.width = w;
         _canvas.height = h;
     };
@@ -124,6 +124,10 @@ var PanoLoader = function ( parameters ) {
                 rotation = result.tiles.centerHeading;
                 copyright = result.copyright;
                 self.copyright = result.copyright;
+                _tileSize = result.tiles.tileSize.width;
+                if (result.tiles.tileSize.width != result.tiles.tileSize.height) {
+                    console.warn('Assumption failed. Tile width is not the same as tile height');
+                }
                 _panoId = result.location.pano;
                 self.composePanorama();
             } else {
@@ -131,7 +135,7 @@ var PanoLoader = function ( parameters ) {
             }
         } );
     };
-    
+
     this.load = function(type) {
         this.adaptTextureToZoom(type);
 
