@@ -275,7 +275,7 @@
     // Cross-origin resource sharing
     // Because the browser doesn't not allow cross origin by default, fetch it from a server and
     // then pass it down.
-    var cors = 'http://projects.mauricelam.com/utils/cors.php?url=';
+    var cors = 'https://projects.mauricelam.com/utils/cors.php?url=';
 
     // List of available textures initially available in the library
     var textures = [

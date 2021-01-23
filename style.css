@@ -1,4 +1,4 @@
-@import url(http://fonts.googleapis.com/css?family=Raleway:400,200);
+@import url(//fonts.googleapis.com/css?family=Raleway:400,200);
 
 * {
     -webkit-box-sizing: border-box;
@@ -176,7 +176,7 @@ section#environments > div {
 
 #imageLibrary > img {
     width: 50px;
-    cursor: url(http://maps.gstatic.com/mapfiles/openhand_8_8.cur) 8 8, default;
+    cursor: url(//maps.gstatic.com/mapfiles/openhand_8_8.cur) 8 8, default;
     margin: 0 3px;
     background: url('textures/empty.png');
 }

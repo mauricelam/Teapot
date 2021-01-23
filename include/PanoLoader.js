@@ -61,7 +61,7 @@ var PanoLoader = function ( parameters ) {
     };
 
     this.buildUrl = function (x, y) {
-        return 'http://maps.google.com/cbk?output=tile&panoid=' + _panoId + '&zoom=' + _zoom + '&x=' + x + '&y=' + y + '&' + Date.now();
+        return '//maps.google.com/cbk?output=tile&panoid=' + _panoId + '&zoom=' + _zoom + '&x=' + x + '&y=' + y + '&' + Date.now();
     };
 
     this.composePanorama = function() {

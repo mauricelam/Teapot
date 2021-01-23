@@ -40,6 +40,6 @@ Interactions
 
 Compile instructions: Start a server at the project directory, for example
                         `python -m SimpleHTTPServer`
-        http://mauricelam.github.io/Teapot
+        https://mauricelam.github.io/Teapot
 Note: just opening index.html won't work because of cross-domain security problems.
 
